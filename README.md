@@ -7,28 +7,35 @@ Oqtane uses Blazor, a new web framework for .NET Core that lets you build intera
 
 **To get started with Oqtane:**
 
-   1.&nbsp;Oqtane is currently compatible with [.NET Core 3.0 Preview 4 SDK (3.0.100-preview4-011223)](https://dotnet.microsoft.com/download/dotnet-core/3.0). Microsoft continues to release new versions of .NET Core 3.0 on a regular basis and we do our best to keep up; however, for the best results you should use the most compatible .NET Core 3.0 version.
+   1.&nbsp;Oqtane is currently compatible with **[.NET Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1)**.
    
-   2.&nbsp;Install the latest preview of [Visual Studio 2019](https://visualstudio.com/preview) with the **ASP.NET and web development** workload.
+   2.&nbsp;Install the latest edition of [Visual Studio 2019](https://visualstudio.com/vs/) (version 16.4 or higher) with the **ASP.NET and web development** workload. Installing the latest edition will also install the latest version of .NET Core 3.1.
 
-   3.&nbsp;Install the latest [Blazor extension](https://go.microsoft.com/fwlink/?linkid=870389) from the Visual Studio Marketplace. 
+   3.&nbsp;Download or Clone the Oqtane source code to your local system. Open the **Oqtane.sln** solution file. If you want to develop using **server-side** Blazor (which includes a full debugging experience in Visual Studio) you should choose to Build the solution using the default Debug configuration. If you want to develop using **client-side** Blazor (WebAssembly) you should first choose the "Wasm" configuration option in the Visual Studio toolbar and then Build.
+   
+   NOTE: If you have already installed a previous version of Oqtane and you wish to install a newer version, there is currently no upgrade path from one version to the next. The recommended upgrade approach is to get the latest code and build it, and then reset the DefaultConnection value to "" in the appsettings.json file in the Oqtane.server project. This will trigger a re-install when you run the application which will execute the latest database scripts.
 
-   4.&nbsp;Enable Visual Studio to use preview SDKs: Open **Tools** > **Options** in the menu bar. Open the **Projects and Solutions** node. Open the **.NET Core** tab. Check the box for **Use previews of the .NET Core SDK**. Select **OK**.
-
-   5.&nbsp;Open the **Oqtane.sln** solution file. If you want to develop using **server-side** Blazor ( which includes a full debugging experience in Visual Studio ) you should choose to Build the solution using the default Debug configuration. If you want to develop using **client-side** Blazor ( WebAssembly ) you should first choose the "Wasm" configuration option in the Visual Studio toolbar and then Build.
+# Roadmap
+This project is a work in progress and the schedule for implementing enhancements is dependent upon the availability of community members who are willing/able to assist.
 
 # Background
-Oqtane was created by [Shaun Walker](https://www.linkedin.com/in/shaunbrucewalker/) and is inspired by the DotNetNuke web application framework. Initially created as a proof of concept, Oqtane is a native Blazor application written from the ground up using modern .NET Core technology. It is a modular framework offering a fully dynamic page compositing model, multi-site support, designer friendly templates ( skins ), and extensibility via third party modules.
-
-At this point Oqtane offers a minimum of desired functionality and is not recommended for production usage. The expectation is that Oqtane will rapidly evolve as a community driven open source project. At this point in time we do not promise any upgrade path from one version to the next, and developers should expect breaking changes as the framework stabilizes.
+Oqtane was created by [Shaun Walker](https://www.linkedin.com/in/shaunbrucewalker/) and is inspired by the DotNetNuke web application framework. Initially created as a proof of concept, Oqtane is a native Blazor application written from the ground up using modern .NET Core technology. It is a modular application framework offering a fully dynamic page compositing model, multi-site support, designer friendly templates (skins), and extensibility via third party modules.
 
 # Release Announcement
 
-[Announcing Oqtane... a Modular Application Framework for Blazor!](https://www.siliqon.com/Home/Post/797)
+[Announcing Oqtane... a Modular Application Framework for Blazor!](https://www.oqtane.org/Resources/Blog/PostId/520/announcing-oqtane-a-modular-application-framework-for-blazor)
 
 # Example Screenshots
 
-A simplistic login flow ( note that a full authentication story has not been implemented at this point ):
+Install Wizard:
+
+![Installer](https://github.com/oqtane/framework/blob/master/installer.png?raw=true "Installer")
+
+Default view after installation:
+
+![Home](https://github.com/oqtane/framework/blob/master/screenshot0.png?raw=true "Home")
+
+A seamless login flow utilizing .NET Core Identity services:
 
 ![Login](https://github.com/oqtane/framework/blob/master/screenshot1.png?raw=true "Login")
 

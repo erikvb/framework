@@ -6,7 +6,10 @@ namespace Oqtane.Shared
 {
     public class PageState
     {
-        public string Alias { get; set; }
+        public List<ModuleDefinition> ModuleDefinitions { get; set; }
+        public List<Theme> Themes { get; set; }
+        public List<Alias> Aliases { get; set; }
+        public Alias Alias { get; set; }
         public Site Site { get; set; }
         public List<Page> Pages { get; set; }
         public Page Page { get; set; }
@@ -15,7 +18,8 @@ namespace Oqtane.Shared
         public Uri Uri { get; set; }
         public Dictionary<string, string> QueryString { get; set; }
         public int ModuleId { get; set; }
-        public string Control { get; set; }
-        public string Mode { get; set; }
+        public string Action { get; set; }
+        public bool EditMode { get; set; }
+        public bool DesignMode { get; set; }
     }
 }

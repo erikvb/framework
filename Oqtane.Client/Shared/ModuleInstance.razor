@@ -1,27 +1,45 @@
-﻿@using Oqtane.Models
-@using Oqtane.Shared
+﻿@namespace Oqtane.Shared
 
-@DynamicComponent
+<ModuleMessage Message="@message" Type="MessageType.Error" />
+<CascadingValue Value="this">
+    <ModuleMessage @ref="modulemessage" />
+    @DynamicComponent
+</CascadingValue>
+@if (progressindicator)
+{
+    <div class="app-progress-indicator"></div>
+}
 
-@functions {
+@code {
     [CascadingParameter]
     protected PageState PageState { get; set; }
 
     [CascadingParameter]
     private Module ModuleState { get; set; }
 
+    private ModuleMessage modulemessage { get; set; }
+    string message;
+
     RenderFragment DynamicComponent { get; set; }
 
-    protected override void OnInit()
+    bool progressindicator = false;
+
+    protected override void OnParametersSet()
     {
         DynamicComponent = builder =>
         {
             string typename = ModuleState.ModuleType;
-            if (PageState.Control == "Settings") // module settings are a core component
+            // check for core module actions component
+            if (Constants.DefaultModuleActions.Contains(PageState.Action))
             {
-                typename = Constants.DefaultSettingsControl;
+                typename = Constants.DefaultModuleActionsTemplate.Replace(Constants.ActionToken, PageState.Action);
             }
-            Type moduleType = Type.GetType(typename);
+
+            Type moduleType = null;
+            if (typename != null)
+            {
+                moduleType = Type.GetType(typename);
+            }
             if (moduleType != null)
             {
                 builder.OpenComponent(0, moduleType);
@@ -29,8 +47,28 @@
             }
             else
             {
-                // module control does not exist with typename specified
+                // module does not exist with typename specified
+                message = "Module Does Not Have A Component Named " + Utilities.GetTypeNameLastSegment(typename, 0) + ".razor";
             }
         };
+    }
+
+    public void AddModuleMessage(string message, MessageType type)
+    {
+        progressindicator = false;
+        StateHasChanged();
+        modulemessage.SetModuleMessage(message, type);
+    }
+
+    public void ShowProgressIndicator()
+    {
+        progressindicator = true;
+        StateHasChanged();
+    }
+
+    public void HideProgressIndicator()
+    {
+        progressindicator = false;
+        StateHasChanged();
     }
 }

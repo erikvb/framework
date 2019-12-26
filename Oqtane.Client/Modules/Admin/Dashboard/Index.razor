@@ -1,0 +1,31 @@
+﻿@namespace Oqtane.Modules.Admin.Dashboard
+@inherits ModuleBase
+@inject IPageService PageService
+@inject IUserService UserService
+
+<div class="row">
+    @foreach (var p in pages)
+    {
+        if (UserSecurity.IsAuthorized(PageState.User, "View", p.Permissions))
+        {
+            string url = NavigateUrl(p.Path);
+            <div class="col-md-2 mx-auto text-center">
+                <NavLink class="nav-link" href="@url" Match="NavLinkMatch.All">
+                    <h2><span class="oi oi-@p.Icon" aria-hidden="true"></span></h2>@p.Name
+                </NavLink>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    public override SecurityAccessLevel SecurityAccessLevel { get { return SecurityAccessLevel.Admin; } }
+
+    List<Page> pages;
+
+    protected override void OnInitialized()
+    {
+        Page admin = PageState.Pages.Where(item => item.Path == "admin").FirstOrDefault();
+        pages = PageState.Pages.Where(item => item.ParentId == admin.PageId).ToList();
+    }
+}

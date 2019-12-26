@@ -1,49 +1,99 @@
-﻿@using Microsoft.AspNetCore.Components.Routing
-@using Oqtane.Shared
-@using Oqtane.Modules
-@using Microsoft.JSInterop
-@using Oqtane.Models
-@using Oqtane.Services
-@using Oqtane.Client.Modules.Controls
+﻿@namespace Oqtane.Modules.Admin.Login
 @inherits ModuleBase
-@inject IUriHelper UriHelper
+@inject NavigationManager NavigationManager
 @inject IJSRuntime jsRuntime
-@inject IUserService  UserService
+@inject IUserService UserService
+@inject IServiceProvider ServiceProvider
 
-<div class="container">
-    @((MarkupString)Message)
-    <div class="form-group">
-        <label for="Username" class="control-label">Username: </label>
-        <input type="text" name="Username" class="form-control" placeholder="Username" bind="@Username" />
-    </div>
-    <div class="form-group">
-        <label for="Password" class="control-label">Password: </label>
-        <input type="password" name="Password" class="form-control" placeholder="Password" bind="@Password" />
-    </div>
-    <button type="button" class="btn btn-primary" onclick="@Login">Login</button>
-    <NavLink class="btn btn" href="/">Cancel</NavLink>
-</div>
+<AuthorizeView>
+    <Authorizing>
+        <text>...</text>
+    </Authorizing>
+    <Authorized>
+        You are already logged in
+    </Authorized>
+    <NotAuthorized>
+        <div class="container">
+            <div class="form-group">
+                <label for="Username" class="control-label">Username: </label>
+                <input type="text" name="Username" class="form-control" placeholder="Username" @bind="@Username" />
+            </div>
+            <div class="form-group">
+                <label for="Password" class="control-label">Password: </label>
+                <input type="password" name="Password" class="form-control" placeholder="Password" @bind="@Password" />
+            </div>
+            <div class="form-group">
+                <div class="form-check form-check-inline">
+                    <label class="form-check-label" for="Remember">Remember Me?</label>&nbsp;
+                    <input type="checkbox" class="form-check-input" name="Remember" @bind="@Remember" />
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary" @onclick="Login">Login</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
 
-@functions {
-    public override SecurityAccessLevelEnum SecurityAccessLevel { get { return SecurityAccessLevelEnum.Anonymous; } }
+@code {
+    public override SecurityAccessLevel SecurityAccessLevel { get { return SecurityAccessLevel.Anonymous; } }
 
-    public string Message { get; set; } = "<div class=\"alert alert-info\" role=\"alert\">Use host/host For Demo Access</div>";
     public string Username { get; set; } = "";
     public string Password { get; set; } = "";
+    public bool Remember { get; set; } = false;
 
     private async Task Login()
     {
-        List<User> users = await UserService.GetUsersAsync();
-        User user = users.Where(item => item.Username == Username).FirstOrDefault();
-        if (user != null)
+        string ReturnUrl = PageState.QueryString["returnurl"];
+
+        var authstateprovider = (IdentityAuthenticationStateProvider)ServiceProvider.GetService(typeof(IdentityAuthenticationStateProvider));
+        if (authstateprovider == null)
         {
-            var interop = new Interop(jsRuntime);
-            await interop.SetCookie("user", user.UserId.ToString(), 7);
-            UriHelper.NavigateTo(PageState.Alias, true);
+            // server-side Blazor
+            User user = new User();
+            user.SiteId = PageState.Site.SiteId;
+            user.Username = Username;
+            user.Password = Password;
+            user = await UserService.LoginUserAsync(user, false, false);
+            if (user.IsAuthenticated)
+            {
+                await logger.LogInformation("Login Successful For Username {Username}", Username);
+                // complete the login on the server so that the cookies are set correctly on SignalR
+                var interop = new Interop(jsRuntime);
+                string antiforgerytoken = await interop.GetElementByName("__RequestVerificationToken");
+                var fields = new { __RequestVerificationToken = antiforgerytoken, username = Username, password = Password, remember = Remember, returnurl = ReturnUrl };
+                await interop.SubmitForm("/login/", fields);
+            }
+            else
+            {
+                await logger.LogInformation("Login Failed For Username {Username}", Username);
+                AddModuleMessage("Login Failed. Please Remember That Passwords Are Case Sensitive.", MessageType.Error);
+            }
         }
         else
         {
-            Message = "<div class=\"alert alert-danger\" role=\"alert\">User Does Not Exist</div>";
+            // client-side Blazor
+            User user = new User();
+            user.SiteId = PageState.Site.SiteId;
+            user.Username = Username;
+            user.Password = Password;
+            user = await UserService.LoginUserAsync(user, true, Remember);
+            if (user.IsAuthenticated)
+            {
+                await logger.LogInformation("Login Successful For Username {Username}", Username);
+                authstateprovider.NotifyAuthenticationChanged();
+                NavigationManager.NavigateTo(NavigateUrl(ReturnUrl, Reload.Site));
+            }
+            else
+            {
+                await logger.LogInformation("Login Failed For Username {Username}", Username);
+                AddModuleMessage("Login Failed. Please Remember That Passwords Are Case Sensitive.", MessageType.Error);
+            }
         }
+    }
+
+    private void Cancel()
+    {
+        string ReturnUrl = PageState.QueryString["returnurl"];
+        NavigationManager.NavigateTo(ReturnUrl);
     }
 }
