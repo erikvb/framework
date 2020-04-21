@@ -1,44 +1,37 @@
 ﻿using Oqtane.Models;
 using System.Threading.Tasks;
 using System.Net.Http;
-using System.Linq;
 using Microsoft.AspNetCore.Components;
-using System.Collections.Generic;
 using Oqtane.Shared;
 
 namespace Oqtane.Services
 {
     public class InstallationService : ServiceBase, IInstallationService
     {
-        private readonly HttpClient http;
-        private readonly SiteState sitestate;
-        private readonly NavigationManager NavigationManager;
+        private readonly SiteState _siteState;
+        private readonly NavigationManager _navigationManager;
 
-        public InstallationService(HttpClient http, SiteState sitestate, NavigationManager NavigationManager)
+        public InstallationService(HttpClient http, SiteState siteState, NavigationManager navigationManager):base(http)
         {
-            this.http = http;
-            this.sitestate = sitestate;
-            this.NavigationManager = NavigationManager;
+            _siteState = siteState;
+            _navigationManager = navigationManager;
         }
 
-        private string apiurl
+        private string ApiUrl => CreateApiUrl(_siteState.Alias, _navigationManager.Uri, "Installation");
+
+        public async Task<Installation> IsInstalled()
         {
-            get { return CreateApiUrl(sitestate.Alias, NavigationManager.Uri, "Installation"); }
+            return await GetJsonAsync<Installation>($"{ApiUrl}/installed");
         }
 
-        public async Task<GenericResponse> IsInstalled()
+        public async Task<Installation> Install(InstallConfig config)
         {
-            return await http.GetJsonAsync<GenericResponse>(apiurl + "/installed");
+            return await PostJsonAsync<InstallConfig,Installation>(ApiUrl, config);
         }
 
-        public async Task<GenericResponse> Install(string connectionstring)
+        public async Task<Installation> Upgrade()
         {
-            return await http.PostJsonAsync<GenericResponse>(apiurl, connectionstring);
-        }
-
-        public async Task<GenericResponse> Upgrade()
-        {
-            return await http.GetJsonAsync<GenericResponse>(apiurl + "/upgrade");
+            return await GetJsonAsync<Installation>($"{ApiUrl}/upgrade");
         }
     }
 }

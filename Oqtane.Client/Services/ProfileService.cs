@@ -10,50 +10,45 @@ namespace Oqtane.Services
 {
     public class ProfileService : ServiceBase, IProfileService
     {
-        private readonly HttpClient http;
-        private readonly SiteState sitestate;
-        private readonly NavigationManager NavigationManager;
+        
+        private readonly SiteState _siteState;
+        private readonly NavigationManager _navigationManager;
 
-        public ProfileService(HttpClient http, SiteState sitestate, NavigationManager NavigationManager)
+        public ProfileService(HttpClient http, SiteState siteState, NavigationManager navigationManager) : base(http)
         {
-            this.http = http;
-            this.sitestate = sitestate;
-            this.NavigationManager = NavigationManager;
+            
+            _siteState = siteState;
+            _navigationManager = navigationManager;
         }
 
-        private string apiurl
+        private string Apiurl
         {
-            get { return CreateApiUrl(sitestate.Alias, NavigationManager.Uri, "Profile"); }
+            get { return CreateApiUrl(_siteState.Alias, _navigationManager.Uri, "Profile"); }
         }
 
-        public async Task<List<Profile>> GetProfilesAsync()
+        public async Task<List<Profile>> GetProfilesAsync(int siteId)
         {
-            return await http.GetJsonAsync<List<Profile>>(apiurl);
+            List<Profile> profiles = await GetJsonAsync<List<Profile>>($"{Apiurl}?siteid={siteId.ToString()}");
+            return profiles.OrderBy(item => item.ViewOrder).ToList();
         }
 
-        public async Task<List<Profile>> GetProfilesAsync(int SiteId)
+        public async Task<Profile> GetProfileAsync(int profileId)
         {
-            List<Profile> Profiles = await http.GetJsonAsync<List<Profile>>(apiurl + "?siteid=" + SiteId.ToString());
-            return Profiles.OrderBy(item => item.ViewOrder).ToList();
+            return await GetJsonAsync<Profile>($"{Apiurl}/{profileId.ToString()}");
         }
 
-        public async Task<Profile> GetProfileAsync(int ProfileId)
+        public async Task<Profile> AddProfileAsync(Profile profile)
         {
-            return await http.GetJsonAsync<Profile>(apiurl + "/" + ProfileId.ToString());
+            return await PostJsonAsync<Profile>(Apiurl, profile);
         }
 
-        public async Task<Profile> AddProfileAsync(Profile Profile)
+        public async Task<Profile> UpdateProfileAsync(Profile profile)
         {
-            return await http.PostJsonAsync<Profile>(apiurl, Profile);
+            return await PutJsonAsync<Profile>($"{Apiurl}/{profile.SiteId.ToString()}", profile);
         }
-
-        public async Task<Profile> UpdateProfileAsync(Profile Profile)
+        public async Task DeleteProfileAsync(int profileId)
         {
-            return await http.PutJsonAsync<Profile>(apiurl + "/" + Profile.SiteId.ToString(), Profile);
-        }
-        public async Task DeleteProfileAsync(int ProfileId)
-        {
-            await http.DeleteAsync(apiurl + "/" + ProfileId.ToString());
+            await DeleteAsync($"{Apiurl}/{profileId.ToString()}");
         }
     }
 }

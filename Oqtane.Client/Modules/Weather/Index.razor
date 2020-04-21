@@ -32,11 +32,11 @@ else
 }
 
 @code {
-    WeatherForecast[] forecasts;
+    private WeatherForecast[] forecasts;
 
     protected override async Task OnInitializedAsync()
     {
         WeatherForecastService forecastservice = new WeatherForecastService();
-        forecasts = await forecastservice.GetForecastAsync(DateTime.Now);
+        forecasts = await forecastservice.GetForecastAsync(DateTime.UtcNow);
     }
 }

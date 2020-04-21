@@ -1,60 +1,61 @@
-using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
-using Oqtane.Services;
 using Oqtane.Modules.HtmlText.Models;
+using Oqtane.Services;
 using Oqtane.Shared;
-using Oqtane.Models;
 
 namespace Oqtane.Modules.HtmlText.Services
 {
     public class HtmlTextService : ServiceBase, IHtmlTextService
     {
-        private readonly HttpClient http;
-        private readonly SiteState sitestate;
-        private readonly NavigationManager NavigationManager;
+        
+        private readonly NavigationManager _navigationManager;
+        private readonly SiteState _siteState;
 
-        public HtmlTextService(HttpClient http, SiteState sitestate, NavigationManager NavigationManager)
+        public HtmlTextService(HttpClient http, SiteState siteState, NavigationManager navigationManager) : base(http)
         {
-            this.http = http;
-            this.sitestate = sitestate;
-            this.NavigationManager = NavigationManager;
+            
+            _siteState = siteState;
+            _navigationManager = navigationManager;
         }
 
-        private string apiurl
-        {
-            get { return CreateApiUrl(sitestate.Alias, NavigationManager.Uri, "HtmlText"); }
-        }
+        private string ApiUrl => CreateApiUrl(_siteState.Alias, _navigationManager.Uri, "HtmlText");
 
-        public async Task<HtmlTextInfo> GetHtmlTextAsync(int ModuleId)
+        public async Task<HtmlTextInfo> GetHtmlTextAsync(int moduleId)
         {
-            HtmlTextInfo htmltext;
+            HtmlTextInfo htmlText;
             try
             {
-                // exception handling is required because GetJsonAsync() returns an error if no content exists for the ModuleId ( https://github.com/aspnet/AspNetCore/issues/14041 )
-                htmltext = await http.GetJsonAsync<HtmlTextInfo>(apiurl + "/" + ModuleId.ToString() + "?entityid=" + ModuleId.ToString());
+                //because GetJsonAsync() returns an error if no content exists for the ModuleId ( https://github.com/aspnet/AspNetCore/issues/14041 )
+                //null value is transfered as empty list
+                var htmlTextList = await GetJsonAsync<List<HtmlTextInfo>>(ApiUrl + "/" + moduleId + "?entityid=" + moduleId);
+                htmlText = htmlTextList.FirstOrDefault();
             }
             catch
             {
-                htmltext = null;
+                htmlText = null;
             }
-            return htmltext;
+
+            return htmlText;
         }
 
-        public async Task AddHtmlTextAsync(HtmlTextInfo htmltext)
+        public async Task AddHtmlTextAsync(HtmlTextInfo htmlText)
         {
-            await http.PostJsonAsync(apiurl + "?entityid=" + htmltext.ModuleId.ToString(), htmltext);
+            await PostJsonAsync(ApiUrl + "?entityid=" + htmlText.ModuleId, htmlText);
         }
 
-        public async Task UpdateHtmlTextAsync(HtmlTextInfo htmltext)
+        public async Task UpdateHtmlTextAsync(HtmlTextInfo htmlText)
         {
-            await http.PutJsonAsync(apiurl + "/" + htmltext.HtmlTextId.ToString() + "?entityid=" + htmltext.ModuleId.ToString(), htmltext);
+            await PutJsonAsync(ApiUrl + "/" + htmlText.HtmlTextId + "?entityid=" + htmlText.ModuleId, htmlText);
         }
 
-        public async Task DeleteHtmlTextAsync(int ModuleId)
+
+        public async Task DeleteHtmlTextAsync(int moduleId)
         {
-            await http.DeleteAsync(apiurl + "/" + ModuleId.ToString() + "?entityid=" + ModuleId.ToString());
+            await DeleteAsync(ApiUrl + "/" + moduleId + "?entityid=" + moduleId);
         }
-
     }
 }

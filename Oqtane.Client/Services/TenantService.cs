@@ -10,46 +10,46 @@ namespace Oqtane.Services
 {
     public class TenantService : ServiceBase, ITenantService
     {
-        private readonly HttpClient http;
-        private readonly SiteState sitestate;
-        private readonly NavigationManager NavigationManager;
+        
+        private readonly SiteState _siteState;
+        private readonly NavigationManager _navigationManager;
 
-        public TenantService(HttpClient http, SiteState sitestate, NavigationManager NavigationManager)
+        public TenantService(HttpClient http, SiteState siteState, NavigationManager navigationManager) : base(http)
         {
-            this.http = http;
-            this.sitestate = sitestate;
-            this.NavigationManager = NavigationManager;
+            
+            _siteState = siteState;
+            _navigationManager = navigationManager;
         }
 
-        private string apiurl
+        private string Apiurl
         {
-            get { return CreateApiUrl(sitestate.Alias, NavigationManager.Uri, "Tenant"); }
+            get { return CreateApiUrl(_siteState.Alias, _navigationManager.Uri, "Tenant"); }
         }
 
         public async Task<List<Tenant>> GetTenantsAsync()
         {
-            List<Tenant> tenants = await http.GetJsonAsync<List<Tenant>>(apiurl);
+            List<Tenant> tenants = await GetJsonAsync<List<Tenant>>(Apiurl);
             return tenants.OrderBy(item => item.Name).ToList();
         }
 
-        public async Task<Tenant> GetTenantAsync(int TenantId)
+        public async Task<Tenant> GetTenantAsync(int tenantId)
         {
-            return await http.GetJsonAsync<Tenant>(apiurl + "/" + TenantId.ToString());
+            return await GetJsonAsync<Tenant>($"{Apiurl}/{tenantId.ToString()}");
         }
 
-        public async Task<Tenant> AddTenantAsync(Tenant Tenant)
+        public async Task<Tenant> AddTenantAsync(Tenant tenant)
         {
-            return await http.PostJsonAsync<Tenant>(apiurl, Tenant);
+            return await PostJsonAsync<Tenant>(Apiurl, tenant);
         }
 
-        public async Task<Tenant> UpdateTenantAsync(Tenant Tenant)
+        public async Task<Tenant> UpdateTenantAsync(Tenant tenant)
         {
-            return await http.PutJsonAsync<Tenant>(apiurl + "/" + Tenant.TenantId.ToString(), Tenant);
+            return await PutJsonAsync<Tenant>($"{Apiurl}/{tenant.TenantId.ToString()}", tenant);
         }
 
-        public async Task DeleteTenantAsync(int TenantId)
+        public async Task DeleteTenantAsync(int tenantId)
         {
-            await http.DeleteAsync(apiurl + "/" + TenantId.ToString());
+            await DeleteAsync($"{Apiurl}/{tenantId.ToString()}");
         }
     }
 }

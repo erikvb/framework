@@ -10,55 +10,55 @@ namespace Oqtane.Services
 {
     public class JobService : ServiceBase, IJobService
     {
-        private readonly HttpClient http;
-        private readonly SiteState sitestate;
-        private readonly NavigationManager NavigationManager;
+        
+        private readonly SiteState _siteState;
+        private readonly NavigationManager _navigationManager;
 
-        public JobService(HttpClient http, SiteState sitestate, NavigationManager NavigationManager)
+        public JobService(HttpClient http, SiteState siteState, NavigationManager navigationManager) : base(http)
         {
-            this.http = http;
-            this.sitestate = sitestate;
-            this.NavigationManager = NavigationManager;
+            
+            _siteState = siteState;
+            _navigationManager = navigationManager;
         }
 
-        private string apiurl
+        private string Apiurl
         {
-            get { return CreateApiUrl(sitestate.Alias, NavigationManager.Uri, "Job"); }
+            get { return CreateApiUrl(_siteState.Alias, _navigationManager.Uri, "Job"); }
         }
 
         public async Task<List<Job>> GetJobsAsync()
         {
-            List<Job> Jobs = await http.GetJsonAsync<List<Job>>(apiurl);
-            return Jobs.OrderBy(item => item.Name).ToList();
+            List<Job> jobs = await GetJsonAsync<List<Job>>(Apiurl);
+            return jobs.OrderBy(item => item.Name).ToList();
         }
 
-        public async Task<Job> GetJobAsync(int JobId)
+        public async Task<Job> GetJobAsync(int jobId)
         {
-            return await http.GetJsonAsync<Job>(apiurl + "/" + JobId.ToString());
+            return await GetJsonAsync<Job>($"{Apiurl}/{jobId.ToString()}");
         }
 
-        public async Task<Job> AddJobAsync(Job Job)
+        public async Task<Job> AddJobAsync(Job job)
         {
-            return await http.PostJsonAsync<Job>(apiurl, Job);
+            return await PostJsonAsync<Job>(Apiurl, job);
         }
 
-        public async Task<Job> UpdateJobAsync(Job Job)
+        public async Task<Job> UpdateJobAsync(Job job)
         {
-            return await http.PutJsonAsync<Job>(apiurl + "/" + Job.JobId.ToString(), Job);
+            return await PutJsonAsync<Job>($"{Apiurl}/{job.JobId.ToString()}", job);
         }
-        public async Task DeleteJobAsync(int JobId)
+        public async Task DeleteJobAsync(int jobId)
         {
-            await http.DeleteAsync(apiurl + "/" + JobId.ToString());
-        }
-
-        public async Task StartJobAsync(int JobId)
-        {
-            await http.GetAsync(apiurl + "/start/" + JobId.ToString());
+            await DeleteAsync($"{Apiurl}/{jobId.ToString()}");
         }
 
-        public async Task StopJobAsync(int JobId)
+        public async Task StartJobAsync(int jobId)
         {
-            await http.GetAsync(apiurl + "/stop/" + JobId.ToString());
+            await GetAsync($"{Apiurl}/start/{jobId.ToString()}");
+        }
+
+        public async Task StopJobAsync(int jobId)
+        {
+            await GetAsync($"{Apiurl}/stop/{jobId.ToString()}");
         }
     }
 }

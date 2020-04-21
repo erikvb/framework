@@ -12,25 +12,25 @@ namespace Oqtane.Services
 {
     public class ThemeService : ServiceBase, IThemeService
     {
-        private readonly HttpClient http;
-        private readonly SiteState sitestate;
-        private readonly NavigationManager NavigationManager;
+        private readonly HttpClient _http;
+        private readonly SiteState _siteState;
+        private readonly NavigationManager _navigationManager;
 
-        public ThemeService(HttpClient http, SiteState sitestate, NavigationManager NavigationManager)
+        public ThemeService(HttpClient http, SiteState siteState, NavigationManager navigationManager) : base(http)
         {
-            this.http = http;
-            this.sitestate = sitestate;
-            this.NavigationManager = NavigationManager;
+            _http = http;
+            _siteState = siteState;
+            _navigationManager = navigationManager;
         }
 
-        private string apiurl
+        private string Apiurl
         {
-            get { return CreateApiUrl(sitestate.Alias, NavigationManager.Uri, "Theme"); }
+            get { return CreateApiUrl(_siteState.Alias, _navigationManager.Uri, "Theme"); }
         }
 
         public async Task<List<Theme>> GetThemesAsync()
         {
-            List<Theme> themes = await http.GetJsonAsync<List<Theme>>(apiurl);
+            List<Theme> themes = await GetJsonAsync<List<Theme>>(Apiurl);
 
             // get list of loaded assemblies
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
@@ -45,7 +45,7 @@ namespace Oqtane.Services
                         if (assemblies.Where(item => item.FullName.StartsWith(assemblyname + ",")).FirstOrDefault() == null)
                         {
                             // download assembly from server and load
-                            var bytes = await http.GetByteArrayAsync(apiurl + "/" + assemblyname + ".dll");
+                            var bytes = await _http.GetByteArrayAsync($"{Apiurl}/load/{assemblyname}.dll");
                             Assembly.Load(bytes);
                         }
                     }
@@ -53,7 +53,7 @@ namespace Oqtane.Services
                 if (assemblies.Where(item => item.FullName.StartsWith(theme.AssemblyName + ",")).FirstOrDefault() == null)
                 {
                     // download assembly from server and load
-                    var bytes = await http.GetByteArrayAsync(apiurl + "/" + theme.AssemblyName + ".dll");
+                    var bytes = await _http.GetByteArrayAsync($"{Apiurl}/load/{theme.AssemblyName}.dll");
                     Assembly.Load(bytes);
                 }
             }
@@ -61,10 +61,10 @@ namespace Oqtane.Services
             return themes.OrderBy(item => item.Name).ToList();
         }
 
-        public Dictionary<string, string> GetThemeTypes(List<Theme> Themes)
+        public Dictionary<string, string> GetThemeTypes(List<Theme> themes)
         {
             var selectableThemes = new Dictionary<string, string>();
-            foreach (Theme theme in Themes)
+            foreach (Theme theme in themes)
             {
                 foreach (string themecontrol in theme.ThemeControls.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
                 {
@@ -74,12 +74,12 @@ namespace Oqtane.Services
             return selectableThemes;
         }
 
-        public Dictionary<string, string> GetPaneLayoutTypes(List<Theme> Themes, string ThemeName)
+        public Dictionary<string, string> GetPaneLayoutTypes(List<Theme> themes, string themeName)
         {
             var selectablePaneLayouts = new Dictionary<string, string>();
-            foreach (Theme theme in Themes)
+            foreach (Theme theme in themes)
             { 
-                if (ThemeName.StartsWith(theme.ThemeName))
+                if (themeName.StartsWith(theme.ThemeName))
                 {
                     foreach (string panelayout in theme.PaneLayouts.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
                     {
@@ -90,10 +90,10 @@ namespace Oqtane.Services
             return selectablePaneLayouts;
         }
 
-        public Dictionary<string, string> GetContainerTypes(List<Theme> Themes)
+        public Dictionary<string, string> GetContainerTypes(List<Theme> themes)
         {
             var selectableContainers = new Dictionary<string, string>();
-            foreach (Theme theme in Themes)
+            foreach (Theme theme in themes)
             {
                 foreach (string container in theme.ContainerControls.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
                 {
@@ -105,12 +105,12 @@ namespace Oqtane.Services
 
         public async Task InstallThemesAsync()
         {
-            await http.GetJsonAsync<List<string>>(apiurl + "/install");
+            await GetJsonAsync<List<string>>($"{Apiurl}/install");
         }
 
-        public async Task DeleteThemeAsync(string ThemeName)
+        public async Task DeleteThemeAsync(string themeName)
         {
-            await http.DeleteAsync(apiurl + "/" + ThemeName);
+            await DeleteAsync($"{Apiurl}/{themeName}");
         }
     }
 }

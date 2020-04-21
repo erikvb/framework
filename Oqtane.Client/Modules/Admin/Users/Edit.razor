@@ -7,10 +7,18 @@
 
 @if (profiles != null)
 {
+    @if (photofileid != -1)
+    {
+        <img src="@(ContentUrl(photofileid))" alt="@displayname" style="max-width: 400px" class="rounded-circle mx-auto d-block">
+    }
+    else
+    {
+        <br />
+    }
     <table class="table table-borderless">
         <tr>
             <td>
-                <label for="Name" class="control-label">Username: </label>
+                <label  class="control-label">Username: </label>
             </td>
             <td>
                 <input class="form-control" @bind="@username" readonly />
@@ -18,7 +26,7 @@
         </tr>
         <tr>
             <td>
-                <label for="Name" class="control-label">Password: </label>
+                <label  class="control-label">Password: </label>
             </td>
             <td>
                 <input type="password" class="form-control" @bind="@password" />
@@ -26,7 +34,15 @@
         </tr>
         <tr>
             <td>
-                <label for="Name" class="control-label">Email: </label>
+                <label  class="control-label">Confirm Password: </label>
+            </td>
+            <td>
+                <input type="password" class="form-control" @bind="@confirm" />
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <label  class="control-label">Email: </label>
             </td>
             <td>
                 <input class="form-control" @bind="@email" />
@@ -34,10 +50,18 @@
         </tr>
         <tr>
             <td>
-                <label for="Name" class="control-label">Full Name: </label>
+                <label  class="control-label">Full Name: </label>
             </td>
             <td>
                 <input class="form-control" @bind="@displayname" />
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <label  class="control-label">Photo: </label>
+            </td>
+            <td>
+                <FileManager FileId="@photofileid.ToString()" @ref="filemanager" />
             </td>
         </tr>
 
@@ -58,16 +82,16 @@
                     <label for="@p.Name" class="control-label">@p.Title: </label>
                 </td>
                 <td>
-                    <input class="form-control" maxlength="@p.MaxLength" value="@GetProfileValue(p.Name, p.DefaultValue)" placeholder="@p.Description" @onchange="(e => ProfileChanged(e, p.Name))" />
+                    <input class="form-control" maxlength="@p.MaxLength" value="@GetProfileValue(p.Name, p.DefaultValue)" placeholder="@p.Description" @onchange="@(e => ProfileChanged(e, p.Name))" />
                 </td>
             </tr>
         }
         <tr>
             <td>
-                <label for="Name" class="control-label">Is Deleted? </label>
+                <Label For="isDeleted" HelpText="Has the user been deleted">Is Deleted? </Label>
             </td>
             <td>
-                <select class="form-control" @bind="@isdeleted">
+                <select id="isDeleted" class="form-control" @bind="@isdeleted">
                     <option value="True">Yes</option>
                     <option value="False">No</option>
                 </select>
@@ -82,23 +106,26 @@
 }
 
 @code {
-    public override SecurityAccessLevel SecurityAccessLevel { get { return SecurityAccessLevel.Admin; } }
+    private int userid;
+    private string username = string.Empty;
+    private string password = string.Empty;
+    private string confirm = string.Empty;
+    private string email = string.Empty;
+    private string displayname = string.Empty;
+    private FileManager filemanager;
+    private int photofileid = -1;
+    private List<Profile> profiles;
+    private Dictionary<string, string> settings;
+    private string category = string.Empty;
+    private string createdby;
+    private DateTime createdon;
+    private string modifiedby;
+    private DateTime modifiedon;
+    private string deletedby;
+    private DateTime? deletedon;
+    private string isdeleted;
 
-    int userid;
-    string username = "";
-    string password = "";
-    string email = "";
-    string displayname = "";
-    List<Profile> profiles;
-    Dictionary<string, string> settings;
-    string category = "";
-    string createdby;
-    DateTime createdon;
-    string modifiedby;
-    DateTime modifiedon;
-    string deletedby;
-    DateTime? deletedon;
-    string isdeleted;
+    public override SecurityAccessLevel SecurityAccessLevel => SecurityAccessLevel.Admin;
 
     protected override async Task OnInitializedAsync()
     {
@@ -107,12 +134,18 @@
             profiles = await ProfileService.GetProfilesAsync(PageState.Site.SiteId);
 
             userid = Int32.Parse(PageState.QueryString["id"]);
-            User user = await UserService.GetUserAsync(userid, PageState.Site.SiteId);
+            var user = await UserService.GetUserAsync(userid, PageState.Site.SiteId);
             if (user != null)
             {
                 username = user.Username;
                 email = user.Email;
                 displayname = user.DisplayName;
+                
+                if (user.PhotoFileId != null)
+                {
+                    photofileid = user.PhotoFileId.Value;
+                }
+                
                 settings = await SettingService.GetUserSettingsAsync(user.UserId);
                 createdby = user.CreatedBy;
                 createdon = user.CreatedOn;
@@ -131,27 +164,47 @@
     }
 
     private string GetProfileValue(string SettingName, string DefaultValue)
-    {
-        return SettingService.GetSetting(settings, SettingName, DefaultValue);
-    }
+        => SettingService.GetSetting(settings, SettingName, DefaultValue);
 
     private async Task SaveUser()
     {
         try
         {
-            User user = await UserService.GetUserAsync(userid, PageState.Site.SiteId);
-            user.SiteId = PageState.Site.SiteId;
-            user.Username = username;
-            user.Password = password;
-            user.Email = email;
-            user.DisplayName = string.IsNullOrWhiteSpace(user.DisplayName) ? user.Username : user.DisplayName;
-            user.IsDeleted = (isdeleted == null ? true : Boolean.Parse(isdeleted));
+            if (username != string.Empty && password != string.Empty && confirm != string.Empty && email != string.Empty)
+            {
+                if (password == confirm)
+                {
+                    var user = await UserService.GetUserAsync(userid, PageState.Site.SiteId);
+                    user.SiteId = PageState.Site.SiteId;
+                    user.Username = username;
+                    user.Password = password;
+                    user.Email = email;
+                    user.DisplayName = string.IsNullOrWhiteSpace(displayname) ? username : displayname;
+                    user.PhotoFileId = null;
+                    photofileid = filemanager.GetFileId();
+                    
+                    if (photofileid != -1)
+                    {
+                        user.PhotoFileId = photofileid;
+                    }
+                    
+                    user.IsDeleted = (isdeleted == null ? true : Boolean.Parse(isdeleted));
 
-            user = await UserService.UpdateUserAsync(user);
-            await SettingService.UpdateUserSettingsAsync(settings, user.UserId);
-            await logger.LogInformation("User Saved {User}", user);
+                    user = await UserService.UpdateUserAsync(user);
+                    await SettingService.UpdateUserSettingsAsync(settings, user.UserId);
+                    await logger.LogInformation("User Saved {User}", user);
 
-            NavigationManager.NavigateTo(NavigateUrl());
+                    NavigationManager.NavigateTo(NavigateUrl());
+                }
+                else
+                {
+                    AddModuleMessage("Passwords Entered Do Not Match", MessageType.Warning);
+                }
+            }
+            else
+            {
+                AddModuleMessage("You Must Provide A Username, Password, and Email Address", MessageType.Warning);
+            }
         }
         catch (Exception ex)
         {
@@ -162,7 +215,7 @@
 
     private void ProfileChanged(ChangeEventArgs e, string SettingName)
     {
-        string value = (string)e.Value;
+        var value = (string)e.Value;
         settings = SettingService.SetSetting(settings, SettingName, value);
     }
 

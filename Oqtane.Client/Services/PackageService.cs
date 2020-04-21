@@ -10,31 +10,31 @@ namespace Oqtane.Services
 {
     public class PackageService : ServiceBase, IPackageService
     {
-        private readonly HttpClient http;
-        private readonly SiteState sitestate;
-        private readonly NavigationManager NavigationManager;
+        
+        private readonly SiteState _siteState;
+        private readonly NavigationManager _navigationManager;
 
-        public PackageService(HttpClient http, SiteState sitestate, NavigationManager NavigationManager)
+        public PackageService(HttpClient http, SiteState siteState, NavigationManager navigationManager) : base(http)
         {
-            this.http = http;
-            this.sitestate = sitestate;
-            this.NavigationManager = NavigationManager;
+            
+            _siteState = siteState;
+            _navigationManager = navigationManager;
         }
 
-        private string apiurl
+        private string Apiurl
         {
-            get { return CreateApiUrl(sitestate.Alias, NavigationManager.Uri, "Package"); }
+            get { return CreateApiUrl(_siteState.Alias, _navigationManager.Uri, "Package"); }
         }
 
-        public async Task<List<Package>> GetPackagesAsync(string Tag)
+        public async Task<List<Package>> GetPackagesAsync(string tag)
         {
-            List<Package> packages = await http.GetJsonAsync<List<Package>>(apiurl + "?tag=" + Tag);
+            List<Package> packages = await GetJsonAsync<List<Package>>($"{Apiurl}?tag={tag}");
             return packages.OrderByDescending(item => item.Downloads).ToList();
         }
 
-        public async Task DownloadPackageAsync(string PackageId, string Version, string Folder)
+        public async Task DownloadPackageAsync(string packageId, string version, string folder)
         {
-            await http.PostJsonAsync(apiurl + "?packageid=" + PackageId + "&version=" + Version + "&folder=" + Folder, null);
+            await PostAsync($"{Apiurl}?packageid={packageId}&version={version}&folder={folder}");
         }
     }
 }

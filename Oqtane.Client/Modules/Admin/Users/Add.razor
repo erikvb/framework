@@ -10,7 +10,7 @@
     <table class="table table-borderless">
         <tr>
             <td>
-                <label for="Name" class="control-label">Username: </label>
+                <label  class="control-label">Username: </label>
             </td>
             <td>
                 <input class="form-control" @bind="@username" />
@@ -18,7 +18,7 @@
         </tr>
         <tr>
             <td>
-                <label for="Name" class="control-label">Password: </label>
+                <label  class="control-label">Password: </label>
             </td>
             <td>
                 <input type="password" class="form-control" @bind="@password" />
@@ -26,7 +26,15 @@
         </tr>
         <tr>
             <td>
-                <label for="Name" class="control-label">Email: </label>
+                <label  class="control-label">Confirm Password: </label>
+            </td>
+            <td>
+                <input type="password" class="form-control" @bind="@confirm" />
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <label  class="control-label">Email: </label>
             </td>
             <td>
                 <input class="form-control" @bind="@email" />
@@ -34,7 +42,7 @@
         </tr>
         <tr>
             <td>
-                <label for="Name" class="control-label">Full Name: </label>
+                <label  class="control-label">Full Name: </label>
             </td>
             <td>
                 <input class="form-control" @bind="@displayname" />
@@ -58,7 +66,7 @@
                     <label for="@p.Name" class="control-label">@p.Title: </label>
                 </td>
                 <td>
-                    <input class="form-control" maxlength="@p.MaxLength" placeholder="@p.Description" @onchange="(e => ProfileChanged(e, p.Name))" />
+                    <input class="form-control" maxlength="@p.MaxLength" placeholder="@p.Description" @onchange="@(e => ProfileChanged(e, p.Name))" />
                 </td>
             </tr>
         }
@@ -68,15 +76,16 @@
 }
 
 @code {
-    public override SecurityAccessLevel SecurityAccessLevel { get { return SecurityAccessLevel.Admin; } }
+    private string username = string.Empty;
+    private string password = string.Empty;
+    private string confirm = string.Empty;
+    private string email = string.Empty;
+    private string displayname = string.Empty;
+    private List<Profile> profiles;
+    private Dictionary<string, string> settings;
+    private string category = string.Empty;
 
-    string username = "";
-    string password = "";
-    string email = "";
-    string displayname = "";
-    List<Profile> profiles;
-    Dictionary<string, string> settings;
-    string category = "";
+    public override SecurityAccessLevel SecurityAccessLevel => SecurityAccessLevel.Admin;
 
     protected override async Task OnInitializedAsync()
     {
@@ -96,25 +105,40 @@
     {
         try
         {
-            User user = new User();
-            user.SiteId = PageState.Site.SiteId;
-            user.Username = username;
-            user.Password = password;
-            user.Email = email;
-            user.DisplayName = string.IsNullOrWhiteSpace(user.DisplayName) ? user.Username : user.DisplayName;
-
-            user = await UserService.AddUserAsync(user);
-            
-            if (user != null)
+            if (username != string.Empty && password != string.Empty && confirm != string.Empty && email != string.Empty)
             {
-                await SettingService.UpdateUserSettingsAsync(settings, user.UserId);
-                await logger.LogInformation("User Created {User}", user);
-                NavigationManager.NavigateTo(NavigateUrl());
+                if (password == confirm)
+                {
+                    var user = new User();
+                    user.SiteId = PageState.Site.SiteId;
+                    user.Username = username;
+                    user.Password = password;
+                    user.Email = email;
+                    user.DisplayName = string.IsNullOrWhiteSpace(displayname) ? username : displayname;
+                    user.PhotoFileId = null;
+
+                    user = await UserService.AddUserAsync(user);
+
+                    if (user != null)
+                    {
+                        await SettingService.UpdateUserSettingsAsync(settings, user.UserId);
+                        await logger.LogInformation("User Created {User}", user);
+                        NavigationManager.NavigateTo(NavigateUrl());
+                    }
+                    else
+                    {
+                        await logger.LogError("Error Adding User {Username} {Email}", username, email);
+                        AddModuleMessage("Error Adding User. Please Ensure Password Meets Complexity Requirements And Username Is Not Already In Use.", MessageType.Error);
+                    }
+                }
+                else
+                {
+                    AddModuleMessage("Passwords Entered Do Not Match", MessageType.Warning);
+                }
             }
             else
             {
-                await logger.LogError("Error Adding User {Username} {Email}", username, email);
-                AddModuleMessage("Error Adding User. Please Ensure Password Meets Complexity Requirements And Username Is Not Already In Use.", MessageType.Error);
+                AddModuleMessage("You Must Provide A Username, Password, and Email Address", MessageType.Warning);
             }
         }
         catch (Exception ex)
@@ -126,7 +150,7 @@
 
     private void ProfileChanged(ChangeEventArgs e, string SettingName)
     {
-        string value = (string)e.Value;
+        var value = (string)e.Value;
         settings = SettingService.SetSetting(settings, SettingName, value);
     }
 

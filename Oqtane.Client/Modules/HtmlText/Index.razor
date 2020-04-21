@@ -13,21 +13,23 @@
 <br /><br />
 
 @code {
-    string content;
+    private string content = "";
 
     protected override async Task OnParametersSetAsync()
     {
         try
         {
-            HtmlTextService htmltextservice = new HtmlTextService(http, sitestate, NavigationManager);
-            HtmlTextInfo htmltext = await htmltextservice.GetHtmlTextAsync(ModuleState.ModuleId);
+            var htmltextservice = new HtmlTextService(http, sitestate, NavigationManager);
+            var htmltext = await htmltextservice.GetHtmlTextAsync(ModuleState.ModuleId);
             if (htmltext != null)
             {
                 content = htmltext.Content;
+                content = content.Replace(Constants.ContentUrl, ((PageState.Alias.Path == "") ? "/~" : PageState.Alias.Path) + Constants.ContentUrl);
             }
         }
         catch (Exception ex)
         {
+            await logger.LogError(ex, "An Error Occurred Loading Html/Text Content. " + ex.Message);
             AddModuleMessage(ex.Message, MessageType.Error);
         }
     }

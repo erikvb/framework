@@ -7,17 +7,17 @@ namespace Oqtane.Modules.HtmlText.Manager
 {
     public class HtmlTextManager : IPortable
     {
-        private IHtmlTextRepository htmltexts;
+        private IHtmlTextRepository _htmlTexts;
 
         public HtmlTextManager(IHtmlTextRepository htmltexts)
         {
-            this.htmltexts = htmltexts;
+            _htmlTexts = htmltexts;
         }
 
-        public string ExportModule(Module Module)
+        public string ExportModule(Module module)
         {
             string content = "";
-            HtmlTextInfo htmltext = htmltexts.GetHtmlText(Module.ModuleId);
+            HtmlTextInfo htmltext = _htmlTexts.GetHtmlText(module.ModuleId);
             if (htmltext != null)
             {
                 content = WebUtility.HtmlEncode(htmltext.Content);
@@ -25,21 +25,21 @@ namespace Oqtane.Modules.HtmlText.Manager
             return content;
         }
 
-        public void ImportModule(Module Module, string Content, string Version)
+        public void ImportModule(Module module, string content, string version)
         {
-            Content = WebUtility.HtmlDecode(Content);
-            HtmlTextInfo htmltext = htmltexts.GetHtmlText(Module.ModuleId);
+            content = WebUtility.HtmlDecode(content);
+            HtmlTextInfo htmltext = _htmlTexts.GetHtmlText(module.ModuleId);
             if (htmltext != null)
             {
-                htmltext.Content = Content;
-                htmltexts.UpdateHtmlText(htmltext);
+                htmltext.Content = content;
+                _htmlTexts.UpdateHtmlText(htmltext);
             }
             else
             {
                 htmltext = new HtmlTextInfo();
-                htmltext.ModuleId = Module.ModuleId;
-                htmltext.Content = Content;
-                htmltexts.AddHtmlText(htmltext);
+                htmltext.ModuleId = module.ModuleId;
+                htmltext.Content = content;
+                _htmlTexts.AddHtmlText(htmltext);
             }
         }
     }

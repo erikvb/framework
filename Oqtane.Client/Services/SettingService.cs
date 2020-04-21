@@ -10,159 +10,174 @@ namespace Oqtane.Services
 {
     public class SettingService : ServiceBase, ISettingService
     {
-        private readonly HttpClient http;
-        private readonly SiteState sitestate;
-        private readonly NavigationManager NavigationManager;
+        
+        private readonly SiteState _siteState;
+        private readonly NavigationManager _navigationManager;
 
-        public SettingService(HttpClient http, SiteState sitestate, NavigationManager NavigationManager)
+        public SettingService(HttpClient http, SiteState siteState, NavigationManager navigationManager) : base(http)
         {
-            this.http = http;
-            this.sitestate = sitestate;
-            this.NavigationManager = NavigationManager;
+            
+            _siteState = siteState;
+            _navigationManager = navigationManager;
         }
 
-        private string apiurl
+        private string Apiurl
         {
-            get { return CreateApiUrl(sitestate.Alias, NavigationManager.Uri, "Setting"); }
+            get { return CreateApiUrl(_siteState.Alias, _navigationManager.Uri, "Setting"); }
         }
 
         public async Task<Dictionary<string, string>> GetHostSettingsAsync()
         {
-            return await GetSettingsAsync("Host", -1);
+            return await GetSettingsAsync(EntityNames.Host, -1);
         }
 
-        public async Task UpdateHostSettingsAsync(Dictionary<string, string> HostSettings)
+        public async Task UpdateHostSettingsAsync(Dictionary<string, string> hostSettings)
         {
-            await UpdateSettingsAsync(HostSettings, "Host", -1); 
+            await UpdateSettingsAsync(hostSettings, EntityNames.Host, -1);
         }
 
-        public async Task<Dictionary<string, string>> GetSiteSettingsAsync(int SiteId)
+        public async Task<Dictionary<string, string>> GetSiteSettingsAsync(int siteId)
         {
-            return await GetSettingsAsync("Site", SiteId);
+            return await GetSettingsAsync(EntityNames.Site, siteId);
         }
 
-        public async Task UpdateSiteSettingsAsync(Dictionary<string, string> SiteSettings, int SiteId)
+        public async Task UpdateSiteSettingsAsync(Dictionary<string, string> siteSettings, int siteId)
         {
-            await UpdateSettingsAsync(SiteSettings, "Site", SiteId);
+            await UpdateSettingsAsync(siteSettings, EntityNames.Site, siteId);
         }
 
-        public async Task<Dictionary<string, string>> GetPageSettingsAsync(int PageId)
+        public async Task<Dictionary<string, string>> GetPageSettingsAsync(int pageId)
         {
-            return await GetSettingsAsync("Page", PageId);
+            return await GetSettingsAsync(EntityNames.Page, pageId);
         }
 
-        public async Task UpdatePageSettingsAsync(Dictionary<string, string> PageSettings, int PageId)
+        public async Task UpdatePageSettingsAsync(Dictionary<string, string> pageSettings, int pageId)
         {
-            await UpdateSettingsAsync(PageSettings, "Page", PageId);
+            await UpdateSettingsAsync(pageSettings, EntityNames.Page, pageId);
         }
 
-        public async Task<Dictionary<string, string>> GetPageModuleSettingsAsync(int PageModuleId)
+        public async Task<Dictionary<string, string>> GetPageModuleSettingsAsync(int pageModuleId)
         {
-            return await GetSettingsAsync("PageModule", PageModuleId);
+            return await GetSettingsAsync(EntityNames.PageModule, pageModuleId);
         }
 
-        public async Task UpdatePageModuleSettingsAsync(Dictionary<string, string> PageModuleSettings, int PageModuleId)
+        public async Task UpdatePageModuleSettingsAsync(Dictionary<string, string> pageModuleSettings, int pageModuleId)
         {
-            await UpdateSettingsAsync(PageModuleSettings, "PageModule", PageModuleId);
+            await UpdateSettingsAsync(pageModuleSettings, EntityNames.PageModule, pageModuleId);
         }
 
-        public async Task<Dictionary<string, string>> GetModuleSettingsAsync(int ModuleId)
+        public async Task<Dictionary<string, string>> GetModuleSettingsAsync(int moduleId)
         {
-            return await GetSettingsAsync("Module", ModuleId);
+            return await GetSettingsAsync(EntityNames.Module, moduleId);
         }
 
-        public async Task UpdateModuleSettingsAsync(Dictionary<string, string> ModuleSettings, int ModuleId)
+        public async Task UpdateModuleSettingsAsync(Dictionary<string, string> moduleSettings, int moduleId)
         {
-            await UpdateSettingsAsync(ModuleSettings, "Module", ModuleId);
+            await UpdateSettingsAsync(moduleSettings, EntityNames.Module, moduleId);
         }
 
-        public async Task<Dictionary<string, string>> GetUserSettingsAsync(int UserId)
+        public async Task<Dictionary<string, string>> GetUserSettingsAsync(int userId)
         {
-            return await GetSettingsAsync("User", UserId);
+            return await GetSettingsAsync(EntityNames.User, userId);
         }
 
-        public async Task UpdateUserSettingsAsync(Dictionary<string, string> UserSettings, int UserId)
+        public async Task UpdateUserSettingsAsync(Dictionary<string, string> userSettings, int userId)
         {
-            await UpdateSettingsAsync(UserSettings, "User", UserId);
+            await UpdateSettingsAsync(userSettings, EntityNames.User, userId);
         }
 
-        public async Task<Dictionary<string, string>> GetSettingsAsync(string EntityName, int EntityId)
+        public async Task<Dictionary<string, string>> GetFolderSettingsAsync(int folderId)
         {
-            Dictionary<string, string> dictionary = new Dictionary<string, string>();
-            List<Setting> Settings = await http.GetJsonAsync<List<Setting>>(apiurl + "?entityname=" + EntityName + "&entityid=" + EntityId.ToString());
-            foreach(Setting setting in Settings.OrderBy(item => item.SettingName).ToList())
+            return await GetSettingsAsync( EntityNames.Folder, folderId);
+        }
+
+        public async Task UpdateFolderSettingsAsync(Dictionary<string, string> folderSettings, int folderId)
+        {
+            await UpdateSettingsAsync(folderSettings, EntityNames.Folder, folderId);
+        }
+
+        public async Task<Dictionary<string, string>> GetSettingsAsync(string entityName, int entityId)
+        {
+            var dictionary = new Dictionary<string, string>();
+            var settings = await GetJsonAsync<List<Setting>>($"{Apiurl}?entityname={entityName}&entityid={entityId.ToString()}");
+            
+            foreach(Setting setting in settings.OrderBy(item => item.SettingName).ToList())
             {
                 dictionary.Add(setting.SettingName, setting.SettingValue);
             }
             return dictionary;
         }
 
-        public async Task UpdateSettingsAsync(Dictionary<string, string> Settings, string EntityName, int EntityId)
+        public async Task UpdateSettingsAsync(Dictionary<string, string> settings, string entityName, int entityId)
         {
-            List<Setting> settings = await http.GetJsonAsync<List<Setting>>(apiurl + "?entityname=" + EntityName + "&entityid=" + EntityId.ToString());
-            foreach (KeyValuePair<string, string> kvp in Settings)
+            var settingsList = await GetJsonAsync<List<Setting>>($"{Apiurl}?entityname={entityName}&entityid={entityId.ToString()}");
+            
+            foreach (KeyValuePair<string, string> kvp in settings)
             {
-                Setting setting = settings.Where(item => item.SettingName == kvp.Key).FirstOrDefault();
+                Setting setting = settingsList.FirstOrDefault(item => item.SettingName == kvp.Key);
                 if (setting == null)
                 {
                     setting = new Setting();
-                    setting.EntityName = EntityName;
-                    setting.EntityId = EntityId;
+                    setting.EntityName = entityName;
+                    setting.EntityId = entityId;
                     setting.SettingName = kvp.Key;
                     setting.SettingValue = kvp.Value;
                     setting = await AddSettingAsync(setting);
                 }
                 else
                 {
-                    setting.SettingValue = kvp.Value;
-                    setting = await UpdateSettingAsync(setting);
+                    if (setting.SettingValue != kvp.Value)
+                    {
+                        setting.SettingValue = kvp.Value;
+                        setting = await UpdateSettingAsync(setting);
+                    }
                 }
             }
         }
 
 
-        public async Task<Setting> GetSettingAsync(int SettingId)
+        public async Task<Setting> GetSettingAsync(int settingId)
         {
-            return await http.GetJsonAsync<Setting>(apiurl + "/" + SettingId.ToString());
+            return await GetJsonAsync<Setting>($"{Apiurl}/{settingId.ToString()}");
         }
 
-        public async Task<Setting> AddSettingAsync(Setting Setting)
+        public async Task<Setting> AddSettingAsync(Setting setting)
         {
-            return await http.PostJsonAsync<Setting>(apiurl, Setting);
+            return await PostJsonAsync<Setting>(Apiurl, setting);
         }
 
-        public async Task<Setting> UpdateSettingAsync(Setting Setting)
+        public async Task<Setting> UpdateSettingAsync(Setting setting)
         {
-            return await http.PutJsonAsync<Setting>(apiurl + "/" + Setting.SettingId.ToString(), Setting);
+            return await PutJsonAsync<Setting>($"{Apiurl}/{setting.SettingId.ToString()}", setting);
         }
 
-        public async Task DeleteSettingAsync(int SettingId)
+        public async Task DeleteSettingAsync(int settingId)
         {
-            await http.DeleteAsync(apiurl + "/" + SettingId.ToString());
+            await DeleteAsync($"{Apiurl}/{settingId.ToString()}");
         }
 
 
-        public string GetSetting(Dictionary<string, string> Settings, string SettingName, string DefaultValue)
+        public string GetSetting(Dictionary<string, string> settings, string settingName, string defaultValue)
         {
-            string value = DefaultValue;
-            if (Settings.ContainsKey(SettingName))
+            string value = defaultValue;
+            if (settings.ContainsKey(settingName))
             {
-                value = Settings[SettingName];
+                value = settings[settingName];
             }
             return value;
         }
 
-        public Dictionary<string, string> SetSetting(Dictionary<string, string> Settings, string SettingName, string SettingValue)
+        public Dictionary<string, string> SetSetting(Dictionary<string, string> settings, string settingName, string settingValue)
         {
-            if (Settings.ContainsKey(SettingName))
+            if (settings.ContainsKey(settingName))
             { 
-                Settings[SettingName] = SettingValue;
+                settings[settingName] = settingValue;
             }
             else
             {
-                Settings.Add(SettingName, SettingValue);
+                settings.Add(settingName, settingValue);
             }
-            return Settings;
+            return settings;
         }
     }
 }

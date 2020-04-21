@@ -4,7 +4,7 @@
 @inject IUserService UserService
 @inject IPageModuleService PageModuleService
 
-@if (PageState.DesignMode && UserSecurity.IsAuthorized(PageState.User, "Edit", ModuleState.Permissions))
+@if (PageState.EditMode && !PageState.Page.EditMode && UserSecurity.IsAuthorized(PageState.User,PermissionNames.Edit, ModuleState.Permissions))
 {
     <a class="nav-link dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"></a>
     <div class="dropdown-menu" x-placement="bottom-start" style="position: absolute; will-change: transform; top: 0px; left: 0px; transform: translate3d(0px, 37px, 0px);">
@@ -23,37 +23,44 @@
 }
 
 @code {
-        List<ActionViewModel> actions;
+    private List<ActionViewModel> actions;
 
     protected override void OnParametersSet()
     {
-        if (PageState.EditMode && UserSecurity.IsAuthorized(PageState.User, "Edit", ModuleState.Permissions))
+        if (PageState.EditMode && UserSecurity.IsAuthorized(PageState.User,PermissionNames.Edit, ModuleState.Permissions))
         {
             actions = new List<ActionViewModel>();
             actions.Add(new ActionViewModel { Action = "settings", Name = "Manage Settings" });
-            if (ModuleDefinition.ServerAssemblyName != "")
+            
+            if (ModuleState.ModuleDefinition != null && ModuleState.ModuleDefinition.ServerManagerType != "")
             {
                 actions.Add(new ActionViewModel { Action = "import", Name = "Import Content" });
                 actions.Add(new ActionViewModel { Action = "export", Name = "Export Content" });
             }
+            
             actions.Add(new ActionViewModel { Action = "delete", Name = "Delete Module" });
             actions.Add(new ActionViewModel { Action = "", Name = "" });
+            
             if (ModuleState.PaneModuleIndex > 0)
             {
                 actions.Add(new ActionViewModel { Action = "<<", Name = "Move To Top" });
             }
+            
             if (ModuleState.PaneModuleIndex > 0)
             {
                 actions.Add(new ActionViewModel { Action = "<", Name = "Move Up" });
             }
+            
             if (ModuleState.PaneModuleIndex < (ModuleState.PaneModuleCount - 1))
             {
                 actions.Add(new ActionViewModel { Action = ">", Name = "Move Down" });
             }
+            
             if (ModuleState.PaneModuleIndex < (ModuleState.PaneModuleCount - 1))
             {
                 actions.Add(new ActionViewModel { Action = ">>", Name = "Move To Bottom" });
             }
+            
             foreach (string pane in PageState.Page.Panes.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 if (pane != ModuleState.Pane)
@@ -66,11 +73,11 @@
 
     protected async Task ModuleAction(string action)
     {
-        if (PageState.EditMode && UserSecurity.IsAuthorized(PageState.User, "Edit", ModuleState.Permissions))
+        if (PageState.EditMode && UserSecurity.IsAuthorized(PageState.User,PermissionNames.Edit, ModuleState.Permissions))
         {
             PageModule pagemodule = await PageModuleService.GetPageModuleAsync(ModuleState.PageModuleId);
 
-            string url = NavigateUrl(Reload.Page);
+            string url = NavigateUrl();
             switch (action)
             {
                 case "<<":

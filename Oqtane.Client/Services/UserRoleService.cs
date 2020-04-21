@@ -1,6 +1,5 @@
 ﻿using Oqtane.Models;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
@@ -10,50 +9,45 @@ namespace Oqtane.Services
 {
     public class UserRoleService : ServiceBase, IUserRoleService
     {
-        private readonly HttpClient http;
-        private readonly SiteState sitestate;
-        private readonly NavigationManager NavigationManager;
+        
+        private readonly SiteState _siteState;
+        private readonly NavigationManager _navigationManager;
 
-        public UserRoleService(HttpClient http, SiteState sitestate, NavigationManager NavigationManager)
+        public UserRoleService(HttpClient http, SiteState siteState, NavigationManager navigationManager) : base(http)
         {
-            this.http = http;
-            this.sitestate = sitestate;
-            this.NavigationManager = NavigationManager;
+            
+            _siteState = siteState;
+            _navigationManager = navigationManager;
         }
 
-        private string apiurl
+        private string Apiurl
         {
-            get { return CreateApiUrl(sitestate.Alias, NavigationManager.Uri, "UserRole"); }
+            get { return CreateApiUrl(_siteState.Alias, _navigationManager.Uri, "UserRole"); }
         }
 
-        public async Task<List<UserRole>> GetUserRolesAsync()
+        public async Task<List<UserRole>> GetUserRolesAsync(int siteId)
         {
-            return await http.GetJsonAsync<List<UserRole>>(apiurl);
+            return await GetJsonAsync<List<UserRole>>($"{Apiurl}?siteid={siteId.ToString()}");
         }
 
-        public async Task<List<UserRole>> GetUserRolesAsync(int SiteId)
+        public async Task<UserRole> GetUserRoleAsync(int userRoleId)
         {
-            return await http.GetJsonAsync<List<UserRole>>(apiurl + "?siteid=" + SiteId.ToString());
+            return await GetJsonAsync<UserRole>($"{Apiurl}/{userRoleId.ToString()}");
         }
 
-        public async Task<UserRole> GetUserRoleAsync(int UserRoleId)
+        public async Task<UserRole> AddUserRoleAsync(UserRole userRole)
         {
-            return await http.GetJsonAsync<UserRole>(apiurl + "/" + UserRoleId.ToString());
+            return await PostJsonAsync<UserRole>(Apiurl, userRole);
         }
 
-        public async Task<UserRole> AddUserRoleAsync(UserRole UserRole)
+        public async Task<UserRole> UpdateUserRoleAsync(UserRole userRole)
         {
-            return await http.PostJsonAsync<UserRole>(apiurl, UserRole);
+            return await PutJsonAsync<UserRole>($"{Apiurl}/{userRole.UserRoleId.ToString()}", userRole);
         }
 
-        public async Task<UserRole> UpdateUserRoleAsync(UserRole UserRole)
+        public async Task DeleteUserRoleAsync(int userRoleId)
         {
-            return await http.PutJsonAsync<UserRole>(apiurl + "/" + UserRole.UserRoleId.ToString(), UserRole);
-        }
-
-        public async Task DeleteUserRoleAsync(int UserRoleId)
-        {
-            await http.DeleteAsync(apiurl + "/" + UserRoleId.ToString());
+            await DeleteAsync($"{Apiurl}/{userRoleId.ToString()}");
         }
     }
 }
