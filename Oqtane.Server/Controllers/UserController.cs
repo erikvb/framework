@@ -93,14 +93,14 @@ namespace Oqtane.Controllers
 
             bool verified;
             bool allowregistration;
-            if (user.Username == Constants.HostUser)
+            if (user.Username == Constants.HostUser || User.IsInRole(Constants.AdminRole))
             {
                 verified = true;
                 allowregistration = true;
             }
             else
-            {                
-                verified = User.IsInRole(Constants.AdminRole); // only users created by administrators are verified
+            {
+                verified = false;
                 allowregistration = _sites.GetSite(user.SiteId).AllowRegistration;
             }
 
@@ -150,7 +150,7 @@ namespace Oqtane.Controllers
                         }
 
                         // add folder for user
-                        Folder folder = _folders.GetFolder(user.SiteId, "Users\\");
+                        Folder folder = _folders.GetFolder(user.SiteId, Utilities.PathCombine("Users","\\"));
                         if (folder != null)
                         {
                             _folders.AddFolder(new Folder
@@ -158,7 +158,7 @@ namespace Oqtane.Controllers
                                 SiteId = folder.SiteId,
                                 ParentId = folder.FolderId,
                                 Name = "My Folder",
-                                Path = folder.Path + newUser.UserId.ToString() + "\\",
+                                Path = Utilities.PathCombine(folder.Path, newUser.UserId.ToString(),"\\"),
                                 Order = 1,
                                 IsSystem = true,
                                 Permissions = "[{\"PermissionName\":\"Browse\",\"Permissions\":\"[" + newUser.UserId.ToString() + "]\"},{\"PermissionName\":\"View\",\"Permissions\":\"All Users\"},{\"PermissionName\":\"Edit\",\"Permissions\":\"[" +
@@ -308,7 +308,7 @@ namespace Oqtane.Controllers
         public async Task Logout([FromBody] User user)
         {
             await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
-            _logger.Log(LogLevel.Information, this, LogFunction.Security, "User Logout {Username}", user.Username);
+            _logger.Log(LogLevel.Information, this, LogFunction.Security, "User Logout {Username}", (user != null) ? user.Username : "");
         }
 
         // POST api/<controller>/verify
