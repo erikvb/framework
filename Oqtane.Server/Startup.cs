@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -155,7 +154,7 @@ namespace Oqtane
             services.AddSingleton(Configuration);
             services.AddSingleton<IInstallationManager, InstallationManager>();
             services.AddSingleton<ISyncManager, SyncManager>();
-            services.AddSingleton<DatabaseManager>();
+            services.AddSingleton<IDatabaseManager, DatabaseManager>();
 
             // install any modules or themes ( this needs to occur BEFORE the assemblies are loaded into the app domain )
             InstallationManager.UnpackPackages("Modules,Themes", _webRoot);
@@ -186,6 +185,7 @@ namespace Oqtane
             services.AddTransient<IFileRepository, FileRepository>();
             services.AddTransient<ISiteTemplateRepository, SiteTemplateRepository>();
             services.AddTransient<ISqlRepository, SqlRepository>();
+            services.AddTransient<IUpgradeManager, UpgradeManager>();
 
             // load the external assemblies into the app domain
             services.AddOqtaneModules();

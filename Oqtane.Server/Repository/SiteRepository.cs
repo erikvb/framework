@@ -731,7 +731,7 @@ namespace Oqtane.Repository
             CreatePages(site, CreateAdminPages());
         }
 
-        private void CreatePages(Site site, List<PageTemplate> pageTemplates)
+        public void CreatePages(Site site, List<PageTemplate> pageTemplates)
         {
             List<ModuleDefinition> moduledefinitions = _moduleDefinitionRepository.GetModuleDefinitions(site.SiteId).ToList();
             foreach (PageTemplate pagetemplate in pageTemplates)
@@ -784,14 +784,14 @@ namespace Oqtane.Repository
                                 Type moduletype = Type.GetType(moduledefinition.ServerManagerType);
                                 if (moduletype != null && moduletype.GetInterface("IPortable") != null)
                                 {
-                                    var moduleobject = ActivatorUtilities.CreateInstance(_serviceProvider, moduletype);
                                     try
                                     {
+                                        var moduleobject = ActivatorUtilities.CreateInstance(_serviceProvider, moduletype);
                                         ((IPortable)moduleobject).ImportModule(module, pagetemplatemodule.Content, moduledefinition.Version);
                                     }
                                     catch
                                     {
-                                        // error in module import
+                                        // error in IPortable implementation
                                     }
                                 }
                             }
