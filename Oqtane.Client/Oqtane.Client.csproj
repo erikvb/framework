@@ -6,7 +6,7 @@
     <LangVersion>7.3</LangVersion>
     <RazorLangVersion>3.0</RazorLangVersion>
     <Configurations>Debug;Release</Configurations>
-    <Version>0.9.0</Version>
+    <Version>1.0.1</Version>
     <Product>Oqtane</Product>
     <Authors>Shaun Walker</Authors>
     <Company>.NET Foundation</Company>
@@ -15,8 +15,9 @@
     <PackageProjectUrl>https://www.oqtane.org</PackageProjectUrl>
     <RepositoryUrl>https://github.com/oqtane</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
-    <PackageReleaseNotes>Not for production use.</PackageReleaseNotes>
+    <PackageReleaseNotes>https://github.com/oqtane/oqtane.framework/releases/tag/v1.0.1</PackageReleaseNotes>
     <RootNamespace>Oqtane</RootNamespace>
+    <IsPackable>true</IsPackable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,14 +28,14 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="3.2.0-rc1.20223.4" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Build" Version="3.2.0-rc1.20223.4" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="3.1.2" />
-    <PackageReference Include="System.Net.Http.Json" Version="3.2.0-rc1.20217.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="3.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Build" Version="3.2.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="3.2.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="3.1.4" />
+    <PackageReference Include="System.Net.Http.Json" Version="3.2.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Oqtane.Shared\Oqtane.Shared.csproj" />
   </ItemGroup>
-
 </Project>

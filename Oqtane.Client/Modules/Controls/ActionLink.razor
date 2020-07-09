@@ -1,5 +1,5 @@
 ﻿@namespace Oqtane.Modules.Controls
-@inherits ModuleBase
+@inherits ModuleControlBase
 @inject IUserService UserService
 
 @if (_authorized)
@@ -51,12 +51,20 @@
     [Parameter]
     public string IconName { get; set; } // optional - specifies an icon for the link - default is no icon
 
+    [Parameter]
+    public bool IconOnly { get; set; } // optional - specifies only icon in link
+
     protected override void OnParametersSet()
     {
         _text = Action;
         if (!string.IsNullOrEmpty(Text))
         {
             _text = Text;
+        }
+
+        if (IconOnly && !string.IsNullOrEmpty(IconName))
+        {
+            _text = string.Empty;
         }
 
         if (!string.IsNullOrEmpty(Parameters))
@@ -81,7 +89,8 @@
 
         if (!string.IsNullOrEmpty(IconName))
         {
-            _iconSpan = $"<span class=\"oi oi-{IconName}\"></span>&nbsp;";
+            _iconSpan = $"<span class=\"oi oi-{IconName}\"></span>{(IconOnly ? "" : "&nbsp")}";
+
         }
 
         _url = EditUrl(Action, _parameters);
@@ -91,7 +100,7 @@
     private bool IsAuthorized()
     {
         var authorized = false;
-        if (PageState.EditMode || !_editmode)
+        if (PageState.EditMode || _editmode)
         {
             var security = SecurityAccessLevel.Host;
             if (Security == null)
@@ -100,8 +109,8 @@
                 var moduleType = Type.GetType(typename);
                 if (moduleType != null)
                 {
-                    var moduleobject = Activator.CreateInstance(moduleType);
-                    security = (SecurityAccessLevel)moduleType.GetProperty("SecurityAccessLevel").GetValue(moduleobject, null);
+                    var moduleobject = Activator.CreateInstance(moduleType) as IModuleControl;
+                    security = moduleobject.SecurityAccessLevel;
                 }
                 else
                 {
@@ -113,7 +122,7 @@
             {
                 security = Security.Value;
             }
-            
+
             switch (security)
             {
                 case SecurityAccessLevel.Anonymous:
@@ -133,7 +142,7 @@
                     break;
             }
         }
-        
+
         return authorized;
     }
 }

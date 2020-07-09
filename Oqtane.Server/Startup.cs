@@ -14,11 +14,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using Oqtane.Extensions;
 using Oqtane.Infrastructure;
 using Oqtane.Repository;
 using Oqtane.Security;
 using Oqtane.Services;
-using Oqtane.Shared; 
+using Oqtane.Shared;
+using Oqtane.UI;
 
 namespace Oqtane
 {
@@ -26,14 +28,22 @@ namespace Oqtane
     {
         public IConfigurationRoot Configuration { get; }
         private string _webRoot;
-        
+        private Runtime _runtime;
+        private bool _useSwagger;
+
         public Startup(IWebHostEnvironment env)
         {
             var builder = new ConfigurationBuilder()
                 .SetBasePath(env.ContentRootPath)
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
             Configuration = builder.Build();
-            _webRoot = env.WebRootPath;              
+
+            _runtime = (Configuration.GetSection("Runtime").Value == "WebAssembly") ? Runtime.WebAssembly : Runtime.Server;
+            
+            //add possibility to switch off swagger on production.
+            _useSwagger = Configuration.GetSection("UseSwagger").Value != "false";
+
+            _webRoot = env.WebRootPath;
             AppDomain.CurrentDomain.SetData("DataDirectory", Path.Combine(env.ContentRootPath, "Data"));
         }
 
@@ -41,7 +51,6 @@ namespace Oqtane
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc().AddNewtonsoftJson();
             services.AddServerSideBlazor();
 
             // setup HttpClient for server side in a client side compatible fashion ( with auth cookie )
@@ -53,7 +62,7 @@ namespace Oqtane
                     var navigationManager = s.GetRequiredService<NavigationManager>();
                     var httpContextAccessor = s.GetRequiredService<IHttpContextAccessor>();
                     var authToken = httpContextAccessor.HttpContext.Request.Cookies[".AspNetCore.Identity.Application"];
-                    var client = new HttpClient(new HttpClientHandler { UseCookies = false });
+                    var client = new HttpClient(new HttpClientHandler {UseCookies = false});
                     if (authToken != null)
                     {
                         client.DefaultRequestHeaders.Add("Cookie", ".AspNetCore.Identity.Application=" + authToken);
@@ -63,7 +72,7 @@ namespace Oqtane
                 });
             }
 
-            // register authorization services
+            // register custom authorization policies
             services.AddAuthorizationCore(options =>
             {
                 options.AddPolicy("ViewPage", policy => policy.Requirements.Add(new PermissionRequirement(EntityNames.Page, PermissionNames.View)));
@@ -115,7 +124,7 @@ namespace Oqtane
                 .AddEntityFrameworkStores<TenantDBContext>()
                 .AddSignInManager()
                 .AddDefaultTokenProviders();
-            
+
             services.Configure<IdentityOptions>(options =>
             {
                 // Password settings
@@ -157,7 +166,7 @@ namespace Oqtane
             services.AddSingleton<IDatabaseManager, DatabaseManager>();
 
             // install any modules or themes ( this needs to occur BEFORE the assemblies are loaded into the app domain )
-            InstallationManager.UnpackPackages("Modules,Themes", _webRoot);
+            InstallationManager.InstallPackages("Modules,Themes", _webRoot);
 
             // register transient scoped core services
             services.AddTransient<IModuleDefinitionRepository, ModuleDefinitionRepository>();
@@ -187,24 +196,18 @@ namespace Oqtane
             services.AddTransient<ISqlRepository, SqlRepository>();
             services.AddTransient<IUpgradeManager, UpgradeManager>();
 
-            // load the external assemblies into the app domain
-            services.AddOqtaneModules();
-            services.AddOqtaneThemes();
-            services.AddOqtaneSiteTemplates();
+            // load the external assemblies into the app domain, install services 
+            services.AddOqtaneParts(_runtime);
 
             services.AddMvc()
+                .AddNewtonsoftJson()
                 .AddOqtaneApplicationParts() // register any Controllers from custom modules
-                .AddNewtonsoftJson();
+                .ConfigureOqtaneMvc(); // any additional configuration from IStart classes.
 
-            services.AddOqtaneServices();
-            services.AddOqtaneHostedServices();
-
-            services.AddSwaggerGen(c =>
+            if (_useSwagger)
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Oqtane", Version = "v1" });
-            });
-
-
+                services.AddSwaggerGen(c => { c.SwaggerDoc("v1", new OpenApiInfo {Title = "Oqtane", Version = "v1"}); });
+            }
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -220,19 +223,19 @@ namespace Oqtane
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
-
+            // to allow install middleware it should be moved up
+            app.ConfigureOqtaneAssemblies(env);
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseBlazorFrameworkFiles();
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
-
-            app.UseSwagger();
-            app.UseSwaggerUI(c =>
+            if (_useSwagger)
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Oqtane V1");
-            });
+                app.UseSwagger();
+                app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "Oqtane V1"); });
+            }
 
             app.UseEndpoints(endpoints =>
             {
