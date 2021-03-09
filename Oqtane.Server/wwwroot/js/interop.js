@@ -208,14 +208,15 @@ Oqtane.Interop = {
                 bundles.push(scripts[s].bundle);
             }
         }
-        const urls = [];
+        const promises = [];
         for (let b = 0; b < bundles.length; b++) {
+            const urls = [];
             for (let s = 0; s < scripts.length; s++) {
                 if (scripts[s].bundle === bundles[b]) {
                     urls.push(scripts[s].href);
                 }
             }
-            const promise = new Promise((resolve, reject) => {
+            promises.push(new Promise((resolve, reject) => {
                 if (loadjs.isDefined(bundles[b])) {
                     resolve(true);
                 }
@@ -237,9 +238,10 @@ Oqtane.Interop = {
                     .then(function () { resolve(true) })
                     .catch(function (pathsNotFound) { reject(false) });
                 }
-            });
-            await promise;
-            urls = [];
+            }));
+        }
+        if (promises.length !== 0) {
+            await Promise.all(promises);
         }
     },
     getAbsoluteUrl: function (url) {
@@ -327,7 +329,7 @@ Oqtane.Interop = {
 
             while (Chunk = FileChunk.shift()) {
                 PartCount++;
-                var FileName = file.name + ".part_" + PartCount + "_" + TotalParts;
+                var FileName = file.name + ".part_" + PartCount.toString().padStart(3, '0') + "_" + TotalParts.toString().padStart(3, '0');
 
                 var data = new FormData();
                 data.append('folder', folder);

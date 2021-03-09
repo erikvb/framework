@@ -1,40 +1,35 @@
-﻿@namespace Oqtane.Modules.Admin.Login
+@namespace Oqtane.Modules.Admin.Login
 @inherits ModuleBase
 @inject NavigationManager NavigationManager
 @inject IUserService UserService
 @inject IServiceProvider ServiceProvider
+@inject IStringLocalizer<Index> Localizer
 
 @if (_message != string.Empty)
 {
     <ModuleMessage Message="@_message" Type="@_type" />
 }
 <AuthorizeView>
-    <Authorizing>
-        <text>...</text>
-    </Authorizing>
-    <Authorized>
-        <ModuleMessage Message="You Are Already Logged In" Type="MessageType.Info" />
-    </Authorized>
     <NotAuthorized>
-        <div class="container">
+        <div class="container Oqtane-Modules-Admin-Login">
             <div class="form-group">
-                <label for="Username" class="control-label">Username: </label>
-                <input type="text" name="Username" class="form-control" placeholder="Username" @bind="@_username" id="Username" />
+                <label for="Username" class="control-label">@Localizer["Username:"] </label>
+                <input type="text" name="Username" class="form-control username" placeholder="Username" @bind="@_username" id="Username" />
             </div>
             <div class="form-group">
-                <label for="Password" class="control-label">Password: </label>
-                <input type="password" name="Password" class="form-control" placeholder="Password" @bind="@_password" id="Password" />
+                <label for="Password" class="control-label">@Localizer["Password:"] </label>
+                <input type="password" name="Password" class="form-control password" placeholder="Password" @bind="@_password" id="Password" />
             </div>
             <div class="form-group">
                 <div class="form-check form-check-inline">
-                    <label class="form-check-label" for="Remember">Remember Me?</label>&nbsp;
+                    <label class="form-check-label" for="Remember">@Localizer["Remember Me?"]</label>&nbsp;
                     <input type="checkbox" class="form-check-input" name="Remember" @bind="@_remember" id="Remember" />
                 </div>
             </div>
-            <button type="button" class="btn btn-primary" @onclick="Login">Login</button>
-            <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+            <button type="button" class="btn btn-primary" @onclick="Login">@Localizer["Login"]</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancel">@Localizer["Cancel"]</button>
             <br /><br />
-            <button type="button" class="btn btn-secondary" @onclick="Forgot">Forgot Password</button>
+            <button type="button" class="btn btn-secondary" @onclick="Forgot">@Localizer["Forgot Password"]</button>
         </div>
     </NotAuthorized>
 </AuthorizeView>
@@ -49,18 +44,23 @@
 
     public override SecurityAccessLevel SecurityAccessLevel => SecurityAccessLevel.Anonymous;
 
+    public override List<Resource> Resources => new List<Resource>()
+    {
+        new Resource { ResourceType = ResourceType.Stylesheet, Url = ModulePath() + "Module.css" }
+    };
+
     protected override async Task OnInitializedAsync()
     {
         if (PageState.QueryString.ContainsKey("returnurl"))
         {
             _returnUrl = PageState.QueryString["returnurl"];
         }
-        
+
         if (PageState.QueryString.ContainsKey("name"))
         {
             _username = PageState.QueryString["name"];
         }
-        
+
         if (PageState.QueryString.ContainsKey("token"))
         {
             var user = new User();
@@ -70,11 +70,11 @@
 
             if (user != null)
             {
-                _message = "User Account Verified Successfully. You Can Now Login With Your Username And Password Below.";
+                _message = Localizer["User Account Verified Successfully. You Can Now Login With Your Username And Password Below."];
             }
             else
             {
-                _message = "User Account Could Not Be Verified. Please Contact Your Administrator For Further Instructions.";
+                _message = Localizer["User Account Could Not Be Verified. Please Contact Your Administrator For Further Instructions."];
                 _type = MessageType.Warning;
             }
         }
@@ -82,7 +82,7 @@
 
     private async Task Login()
     {
-        if (PageState.Runtime == Runtime.Server)
+        if (PageState.Runtime == Oqtane.Shared.Runtime.Server)
         {
             // server-side Blazor
             var user = new User();
@@ -90,7 +90,7 @@
             user.Username = _username;
             user.Password = _password;
             user = await UserService.LoginUserAsync(user, false, false);
-            
+
             if (user.IsAuthenticated)
             {
                 await logger.LogInformation("Login Successful For Username {Username}", _username);
@@ -103,7 +103,7 @@
             else
             {
                 await logger.LogInformation("Login Failed For Username {Username}", _username);
-                AddModuleMessage("Login Failed. Please Remember That Passwords Are Case Sensitive And User Accounts Require Email Verification When They Initially Created.", MessageType.Error);
+                AddModuleMessage(Localizer["Login Failed. Please Remember That Passwords Are Case Sensitive And User Accounts Require Email Verification When They Initially Created."], MessageType.Error);
             }
         }
         else
@@ -124,7 +124,7 @@
             else
             {
                 await logger.LogInformation("Login Failed For Username {Username}", _username);
-                AddModuleMessage("Login Failed. Please Remember That Passwords Are Case Sensitive And User Accounts Require Verification When They Are Initially Created So You May Wish To Check Your Email.", MessageType.Error);
+                AddModuleMessage(Localizer["Login Failed. Please Remember That Passwords Are Case Sensitive And User Accounts Require Verification When They Are Initially Created So You May Wish To Check Your Email."], MessageType.Error);
             }
         }
     }
@@ -154,7 +154,7 @@
         {
             _message = "Please Enter The Username Related To Your Account And Then Select The Forgot Password Option Again";
         }
-        
+
         StateHasChanged();
     }
 }

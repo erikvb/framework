@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -25,10 +25,21 @@ namespace Oqtane.Infrastructure
         // abstract method must be overridden
         public abstract string ExecuteJob(IServiceProvider provider);
 
+        // public properties which can be overridden and are used during auto registration of job
+        public string Name { get; set; } = "";
+        public string Frequency { get; set; } = "d"; // day
+        public int Interval { get; set; } = 1;
+        public DateTime? StartDate { get; set; } = null;
+        public DateTime? EndDate { get; set; } = null;
+        public int RetentionHistory { get; set; } = 10;
+        public bool IsEnabled { get; set; } = false;
+
         protected async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            await Task.Yield(); // required so that this method does not block startup
+
             try
-            {
+            {                
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     using (var scope = _serviceScopeFactory.CreateScope())
@@ -41,21 +52,26 @@ namespace Oqtane.Infrastructure
                         Job job = jobs.GetJobs().Where(item => item.JobType == jobType).FirstOrDefault();
                         if (job != null && job.IsEnabled && !job.IsExecuting)
                         {
-                            // set next execution date
+                            // get next execution date
+                            DateTime NextExecution;
                             if (job.NextExecution == null)
                             {
                                 if (job.StartDate != null)
                                 {
-                                    job.NextExecution = job.StartDate;
+                                    NextExecution = job.StartDate.Value;
                                 }
                                 else
                                 {
-                                    job.NextExecution = DateTime.UtcNow;
+                                    NextExecution = DateTime.UtcNow;
                                 }
+                            }
+                            else
+                            {
+                                NextExecution = job.NextExecution.Value;
                             }
 
                             // determine if the job should be run
-                            if (job.NextExecution <= DateTime.UtcNow && (job.EndDate == null || job.EndDate >= DateTime.UtcNow))
+                            if (NextExecution <= DateTime.UtcNow && (job.EndDate == null || job.EndDate >= DateTime.UtcNow))
                             {
                                 IJobLogRepository jobLogs = scope.ServiceProvider.GetRequiredService<IJobLogRepository>();
 
@@ -75,7 +91,15 @@ namespace Oqtane.Infrastructure
                                 // execute the job
                                 try
                                 {
-                                    log.Notes = ExecuteJob(scope.ServiceProvider);
+                                    var notes = "";
+                                    var tenants = scope.ServiceProvider.GetRequiredService<ITenantRepository>();
+                                    var siteState = scope.ServiceProvider.GetRequiredService<SiteState>();
+                                    foreach (var tenant in tenants.GetTenants())
+                                    {
+                                        siteState.Alias = new Alias { TenantId = tenant.TenantId };
+                                        notes += ExecuteJob(scope.ServiceProvider);
+                                    }
+                                    log.Notes = notes;
                                     log.Succeeded = true;
                                 }
                                 catch (Exception ex)
@@ -89,7 +113,7 @@ namespace Oqtane.Infrastructure
                                 jobLogs.UpdateJobLog(log);
 
                                 // update the job
-                                job.NextExecution = CalculateNextExecution(job.NextExecution.Value, job.Frequency, job.Interval);
+                                job.NextExecution = CalculateNextExecution(NextExecution, job.Frequency, job.Interval);
                                 job.IsExecuting = false;
                                 jobs.UpdateJob(job);
 
@@ -146,27 +170,52 @@ namespace Oqtane.Infrastructure
                 // set IsExecuting to false in case this job was forcefully terminated previously 
                 using (var scope = _serviceScopeFactory.CreateScope())
                 {
-                    string jobType = Utilities.GetFullTypeName(GetType().AssemblyQualifiedName);
+                    string jobTypeName = Utilities.GetFullTypeName(GetType().AssemblyQualifiedName);
                     IJobRepository jobs = scope.ServiceProvider.GetRequiredService<IJobRepository>();
-                    Job job = jobs.GetJobs().Where(item => item.JobType == jobType).FirstOrDefault();
+                    Job job = jobs.GetJobs().Where(item => item.JobType == jobTypeName).FirstOrDefault();
                     if (job != null)
                     {
                         job.IsStarted = true;
                         job.IsExecuting = false;
                         jobs.UpdateJob(job);
                     }
+                    else
+                    {
+                        // auto registration - does not run on initial installation but will run after restart
+                        job = new Job { JobType = jobTypeName };
+                        // optional properties
+                        var jobType = Type.GetType(jobTypeName);
+                        var jobObject = ActivatorUtilities.CreateInstance(scope.ServiceProvider, jobType) as HostedServiceBase;
+                        if (jobObject.Name != "")
+                        {
+                            job.Name = jobObject.Name;
+                        }
+                        else
+                        {
+                            job.Name = Utilities.GetTypeName(job.JobType);
+                        }
+                        job.Frequency = jobObject.Frequency;
+                        job.Interval = jobObject.Interval;
+                        job.StartDate = jobObject.StartDate;
+                        job.EndDate = jobObject.EndDate;
+                        job.RetentionHistory = jobObject.RetentionHistory;
+                        job.IsEnabled = jobObject.IsEnabled;
+                        job.IsStarted = true;
+                        job.IsExecuting = false;
+                        jobs.AddJob(job);
+                    }
+                }
+
+                _executingTask = ExecuteAsync(_cancellationTokenSource.Token);
+
+                if (_executingTask.IsCompleted)
+                {
+                    return _executingTask;
                 }
             }
             catch
             {
-                // can occur during the initial installation as there is no DBContext
-            }
-
-            _executingTask = ExecuteAsync(_cancellationTokenSource.Token);
-
-            if (_executingTask.IsCompleted)
-            {
-                return _executingTask;
+                // can occur during the initial installation because this method is called during startup and the database has not yet been created
             }
 
             return Task.CompletedTask;

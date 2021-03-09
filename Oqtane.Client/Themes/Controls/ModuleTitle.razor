@@ -1,4 +1,4 @@
-﻿@namespace Oqtane.Themes.Controls
+@namespace Oqtane.Themes.Controls
 @inherits ContainerBase      
 @attribute [OqtaneIgnore]
 
@@ -9,14 +9,15 @@
 @code {
     private string title = "";
 
-    protected override Task OnParametersSetAsync()
+    protected override void OnParametersSet()
     {
-        title = ModuleState.Title;
-        // check for core module actions component
-        if (Constants.DefaultModuleActions.Contains(PageState.Action))
+        if (!string.IsNullOrEmpty(ModuleState.ControlTitle))
         {
-            title = PageState.Action;
+            title = ModuleState.ControlTitle;
         }
-        return Task.CompletedTask;
+        else
+        {
+            title = ModuleState.Title;
+        }
     }
 }

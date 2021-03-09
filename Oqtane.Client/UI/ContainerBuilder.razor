@@ -1,6 +1,6 @@
-﻿@namespace Oqtane.UI
+@namespace Oqtane.UI
 
-<CascadingValue Value="@_moduleState">
+<CascadingValue Value="@_moduleState" IsFixed="true">
     @DynamicComponent
 </CascadingValue>
 
@@ -19,9 +19,9 @@
     {
         _moduleState = Module; // passed in from Pane component
         string container = _moduleState.ContainerType;
-        if (PageState.ModuleId != -1 && PageState.Action != "" && _moduleState.UseAdminContainer)
+        if (PageState.ModuleId != -1 && _moduleState.UseAdminContainer)
         {
-            container = Constants.DefaultAdminContainer;
+            container = (!string.IsNullOrEmpty(PageState.Site.AdminContainerType)) ? PageState.Site.AdminContainerType : Constants.DefaultAdminContainer;
         }
 
         DynamicComponent = builder =>

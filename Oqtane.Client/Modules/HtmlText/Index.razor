@@ -1,4 +1,4 @@
-﻿@using Oqtane.Modules.HtmlText.Services
+@using Oqtane.Modules.HtmlText.Services
 @namespace Oqtane.Modules.HtmlText
 @inherits ModuleBase
 @inject IHtmlTextService HtmlTextService
@@ -7,12 +7,12 @@
 
 @if (PageState.EditMode)
 {
-    <br /><ActionLink Action="Edit" EditMode="false" /><br /><br />
+    <br /><ActionLink Action="Edit" EditMode="true" ResourceKey="Edit" /><br /><br />
 }
 
 @code {
     public override List<Resource> Resources => new List<Resource>()
-{
+    {
         new Resource { ResourceType = ResourceType.Stylesheet, Url = ModulePath() + "Module.css" }
     };
 
